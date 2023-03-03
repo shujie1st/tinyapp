@@ -43,7 +43,7 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  const id = generateRandomString(6);
+  const id = generateRandomString(6); // generate a random string of 6 characters for short URL id
   urlDatabase[id] = req.body.longURL; // save the longURL and the random generated short URL id to urlDatabase
   console.log(req.body); // Log the POST request body to the console
   res.redirect(`/urls/${id}`); // Respond with a redirection to /urls/:id
