@@ -6,6 +6,16 @@ app.use(express.urlencoded({ extended: true }));
 
 app.set("view engine", "ejs");
 
+// Implement function to generate a requested length of string with random alphanumeric characters
+const generateRandomString = function(length) {
+  const input = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let output = "";
+  for (let i = 0; i < length; i++) {
+    output += input.charAt(Math.floor(Math.random() * input.length));
+  }
+  return output;
+};
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
