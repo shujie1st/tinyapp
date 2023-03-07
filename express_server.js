@@ -25,6 +25,17 @@ const urlDatabase = {
 
 const users = {};
 
+const getUserByEmail = function(email) {
+  for (const userId in users) {
+    if (users.hasOwnProperty(userId)) {
+      if (users[userId].email === email) {
+        return users[userId];
+      }
+    }
+  }
+  return null;
+};
+
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
@@ -90,6 +101,11 @@ app.get("/register", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
+  // if empty email/password, or email already exists, response back with 400 status code
+  if (!req.body.email || !req.body.password || getUserByEmail(req.body.email) !== null) {
+    res.statusCode = 400;
+    res.end();
+  }
   const userId = generateRandomString(6);
   const user = {
     id: userId,
@@ -98,7 +114,7 @@ app.post("/register", (req, res) => {
   };
   users[userId] = user;
   res.cookie("user_id", userId);
-  console.log(users);
+  console.log(users); // test the users object is properly being appended to
   res.redirect("/urls");
 });
 
