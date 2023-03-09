@@ -103,8 +103,8 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   // if empty email/password, or email already exists, response back with 400 status code
   if (!req.body.email || !req.body.password || getUserByEmail(req.body.email) !== null) {
-    res.statusCode = 400;
-    res.end();
+    res.sendStatus(400);
+    return;
   }
   const userId = generateRandomString(6);
   const user = {
