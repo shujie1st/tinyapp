@@ -86,13 +86,17 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  res.cookie("username", username);
+  let user = getUserByEmail(req.body.email);
+  if (user === null || user.password !== req.body.password) {
+    return res.sendStatus(403);
+  }
+  res.cookie("user_id", user.id);
   res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("username")
-  res.redirect("/urls");
+  res.clearCookie("user_id")
+  res.redirect("/login");
 });
 
 app.get("/register", (req, res) => {
@@ -103,8 +107,7 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   // if empty email/password, or email already exists, response back with 400 status code
   if (!req.body.email || !req.body.password || getUserByEmail(req.body.email) !== null) {
-    res.sendStatus(400);
-    return;
+    return res.sendStatus(400);
   }
   const userId = generateRandomString(6);
   const user = {
