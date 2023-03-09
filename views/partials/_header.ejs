@@ -24,11 +24,11 @@
           <label>Logged in as: <%= user.email %></label>
           <button type="submit">Log Out</button>
         </form>
-      <% } else{ %>  
-        <form method="POST" action="/login">
-          <input id="username" type="text" name="username" placeholder="Username">
-          <button type="submit">Log In</button>
-        </form>
+      <% } else{ %>
+        <div class="navbar-nav">
+          <a class="nav-item nav-link" href="/login">Login</a>
+          <a class="nav-item nav-link" href="/register">Register</a>
+        </div>
      <% } %>  
     </div>
   </nav>
