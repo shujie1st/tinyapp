@@ -1,11 +1,15 @@
 const express = require("express");
-const cookieParser = require("cookie-parser");
+const cookieSession = require("cookie-session");
 const app = express();
 const PORT = 8080; // default port 8080
 const bcrypt = require("bcryptjs");
 
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(cookieSession({
+  name: "session",
+  keys: ["some-long-secret-key"],
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}));
 
 app.set("view engine", "ejs"); // use EJS as template engine
 
@@ -46,7 +50,7 @@ const getUserByEmail = function(email) {
 
 // function to check if a user is logged in by reading the cookie
 const isUserLoggedIn = function(req) {
-  if (req.cookies["user_id"] && Object.prototype.hasOwnProperty.call(users, req.cookies["user_id"])) {
+  if (req.session.user_id && Object.prototype.hasOwnProperty.call(users, req.session.user_id)) {
     return true;
   }
   return false;
@@ -73,7 +77,7 @@ app.get("/urls", (req, res) => {
     return res.send("Please login to view your list of URLs!");
   }
 
-  const templateVars = { user: users[req.cookies["user_id"]], urls: urlsForUser(req.cookies["user_id"]) };
+  const templateVars = { user: users[req.session.user_id], urls: urlsForUser(req.session.user_id) };
   res.render("urls_index", templateVars);
 });
 
@@ -82,7 +86,7 @@ app.get("/urls/new", (req, res) => {
   if (!isUserLoggedIn(req)) {
     return res.redirect("/login");
   }
-  const templateVars = { user: users[req.cookies["user_id"]]   };
+  const templateVars = { user: users[req.session.user_id]   };
   res.render("urls_new", templateVars);
 });
 
@@ -91,10 +95,10 @@ app.get("/urls/:id", (req, res) => {
   if (!isUserLoggedIn(req)) {
     return res.send("Please login to view the URL page!");
   }
-  if (urlDatabase[req.params.id].userId !== req.cookies["user_id"]) {
+  if (urlDatabase[req.params.id].userId !== req.session.user_id) {
     return res.send("Access denied!");
   }
-  const templateVars = { user: users[req.cookies["user_id"]], id: req.params.id, longURL: urlDatabase[req.params.id].longURL };
+  const templateVars = { user: users[req.session.user_id], id: req.params.id, longURL: urlDatabase[req.params.id].longURL };
   res.render("urls_show", templateVars);
 });
 
@@ -115,7 +119,7 @@ app.post("/urls", (req, res) => {
   const id = generateRandomString(6); // generate a random string of 6 characters for short URL id
   urlDatabase[id] = {}; // set the value of ulrDatabase[id] as an object
   urlDatabase[id].longURL = req.body.longURL; // save the "longURL" key-value pair to the "id" key
-  urlDatabase[id].userId = req.cookies["user_id"]; // save the "userId" key-value pair to the "id" key
+  urlDatabase[id].userId = req.session.user_id; // save the "userId" key-value pair to the "id" key
   console.log(req.body); // Log the POST request body to the console
   res.redirect(`/urls/${id}`); // Respond with a redirection to /urls/:id
 });
@@ -129,7 +133,7 @@ app.post("/urls/:id", (req, res) => {
   if (!isUserLoggedIn(req)) {
     return res.send("Login required!");
   }
-  if (urlDatabase[req.params.id].userId !== req.cookies["user_id"]) {
+  if (urlDatabase[req.params.id].userId !== req.session.user_id) {
     return res.send("Access denied!");
   }
   urlDatabase[req.params.id].longURL = req.body.newURL;
@@ -144,7 +148,7 @@ app.post("/urls/:id/delete", (req, res) => {
   if (!isUserLoggedIn(req)) {
     return res.send("Login required!");
   }
-  if (urlDatabase[req.params.id].userId !== req.cookies["user_id"]) {
+  if (urlDatabase[req.params.id].userId !== req.session.user_id) {
     return res.send("Access denied!");
   }
   delete urlDatabase[req.params.id];
@@ -156,7 +160,7 @@ app.get("/login", (req, res) => {
   if (isUserLoggedIn(req)) {
     return res.redirect("/urls");
   }
-  const templateVars = { user: users[req.cookies["user_id"]] };
+  const templateVars = { user: users[req.session.user_id] };
   res.render("login", templateVars);
 });
 
@@ -165,7 +169,7 @@ app.get("/register", (req, res) => {
   if (isUserLoggedIn(req)) {
     return res.redirect("/urls");
   }
-  const templateVars = { user: users[req.cookies["user_id"]] };
+  const templateVars = { user: users[req.session.user_id] };
   res.render("register", templateVars);
 });
 
@@ -180,7 +184,7 @@ app.post("/login", (req, res) => {
   }
 
   //if bothe checks pass, set "user_id" cookie, then redirect to "/urls"
-  res.cookie("user_id", user.id);
+  req.session.user_id = user.id;
   res.redirect("/urls");
 });
 
@@ -201,14 +205,14 @@ app.post("/register", (req, res) => {
     password: hashedPassword,
   };
   users[userId] = user;
-  res.cookie("user_id", userId);
+  req.session.user_id = userId;
   console.log(users); // test the users object is properly being appended to
   res.redirect("/urls");
 });
 
 // logout & clear cookie
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session = null;
   res.redirect("/login");
 });
 
