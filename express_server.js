@@ -37,6 +37,13 @@ const getUserByEmail = function(email) {
   return null;
 };
 
+const isUserLoggedIn = function (req) {
+  if (req.cookies["user_id"] && Object.prototype.hasOwnProperty.call(users, req.cookies["user_id"])) {
+    return true;
+  }
+  return false;
+};
+
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
@@ -49,6 +56,9 @@ app.get("/urls", (req, res) => {
 
 // render page to create new URL
 app.get("/urls/new", (req, res) => {
+  if (!isUserLoggedIn(req)) {
+    return res.redirect("/login");
+  }
   const templateVars = { user: users[req.cookies["user_id"]]   };
   res.render("urls_new", templateVars);
 });
@@ -61,12 +71,18 @@ app.get("/urls/:id", (req, res) => {
 
 // redirect to the long URL
 app.get("/u/:id", (req, res) => {
+  if (!Object.prototype.hasOwnProperty.call(urlDatabase, req.params.id)) {
+    return res.sendStatus(404);
+  }
   const longURL = urlDatabase[req.params.id];
   res.redirect(longURL);
 });
 
 // generate short URL
 app.post("/urls", (req, res) => {
+  if (!isUserLoggedIn(req)) {
+    return res.send("Login required!");
+  }
   const id = generateRandomString(6); // generate a random string of 6 characters for short URL id
   urlDatabase[id] = req.body.longURL; // save the longURL and the random generated short URL id to urlDatabase
   console.log(req.body); // Log the POST request body to the console
@@ -87,12 +103,18 @@ app.post("/urls/:id/delete", (req, res) => {
 
 // render login page
 app.get("/login", (req, res) => {
+  if (isUserLoggedIn(req)) {
+    return res.redirect("/urls");
+  }
   const templateVars = { user: users[req.cookies["user_id"]] };
   res.render("login", templateVars);
 });
 
 // render register page
 app.get("/register", (req, res) => {
+  if (isUserLoggedIn(req)) {
+    return res.redirect("/urls");
+  }
   const templateVars = { user: users[req.cookies["user_id"]] };
   res.render("register", templateVars);
 });
