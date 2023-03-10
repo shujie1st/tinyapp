@@ -9,8 +9,14 @@ app.use(cookieParser());
 app.set("view engine", "ejs"); // use EJS as template engine
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xVn2": {
+    longURL: "http://www.lighthouselabs.ca",
+    userId: "sample",
+  },
+  "9sm5xK": {
+    longURL: "http://www.google.com",
+    userId: "sample",
+  },
 };
 
 const users = {};
@@ -37,11 +43,23 @@ const getUserByEmail = function(email) {
   return null;
 };
 
-const isUserLoggedIn = function (req) {
+// function to check if a user is logged in by reading the cookie
+const isUserLoggedIn = function(req) {
   if (req.cookies["user_id"] && Object.prototype.hasOwnProperty.call(users, req.cookies["user_id"])) {
     return true;
   }
   return false;
+};
+
+// fucntion to filter the list in urlDatabase by userID
+const urlsForUser = function(id) {
+  let filteredUrls = {};
+  Object.keys(urlDatabase).forEach(key => {
+    if (urlDatabase[key].userId === id ) {
+      filteredUrls[key] = urlDatabase[key]
+    }
+  });
+  return filteredUrls;
 };
 
 app.get("/", (req, res) => {
@@ -50,7 +68,11 @@ app.get("/", (req, res) => {
 
 // render page with a list of URLs from urlDatabase
 app.get("/urls", (req, res) => {
-  const templateVars = { user: users[req.cookies["user_id"]], urls: urlDatabase };
+  if (!isUserLoggedIn(req)) {
+    return res.send("Please login to view your list of URLs!");
+  }
+
+  const templateVars = { user: users[req.cookies["user_id"]], urls: urlsForUser(req.cookies["user_id"]) };
   res.render("urls_index", templateVars);
 });
 
@@ -65,7 +87,13 @@ app.get("/urls/new", (req, res) => {
 
 // render URL page by id
 app.get("/urls/:id", (req, res) => {
-  const templateVars = { user: users[req.cookies["user_id"]], id: req.params.id, longURL: urlDatabase[req.params.id] };
+  if (!isUserLoggedIn(req)) {
+    return res.send("Please login to view the URL page!");
+  }
+  if (urlDatabase[req.params.id].userId !== req.cookies["user_id"]) {
+    return res.send("Access denied!");
+  }
+  const templateVars = { user: users[req.cookies["user_id"]], id: req.params.id, longURL: urlDatabase[req.params.id].longURL };
   res.render("urls_show", templateVars);
 });
 
@@ -74,7 +102,7 @@ app.get("/u/:id", (req, res) => {
   if (!Object.prototype.hasOwnProperty.call(urlDatabase, req.params.id)) {
     return res.sendStatus(404);
   }
-  const longURL = urlDatabase[req.params.id];
+  const longURL = urlDatabase[req.params.id].longURL;
   res.redirect(longURL);
 });
 
@@ -84,19 +112,40 @@ app.post("/urls", (req, res) => {
     return res.send("Login required!");
   }
   const id = generateRandomString(6); // generate a random string of 6 characters for short URL id
-  urlDatabase[id] = req.body.longURL; // save the longURL and the random generated short URL id to urlDatabase
+  urlDatabase[id] = {}; // set the value of ulrDatabase[id] as an object
+  urlDatabase[id].longURL = req.body.longURL; // save the "longURL" key-value pair to the "id" key
+  urlDatabase[id].userId = req.cookies["user_id"]; // save the "userId" key-value pair to the "id" key
   console.log(req.body); // Log the POST request body to the console
   res.redirect(`/urls/${id}`); // Respond with a redirection to /urls/:id
 });
 
 // update URL
 app.post("/urls/:id", (req, res) => {
-  urlDatabase[req.params.id] = req.body.newURL;
+  // return a relevant error message if id does not exist
+  if (!Object.prototype.hasOwnProperty.call(urlDatabase, req.params.id)) {
+    return res.sendStatus(404);
+  }
+  if (!isUserLoggedIn(req)) {
+    return res.send("Login required!");
+  }
+  if (urlDatabase[req.params.id].userId !== req.cookies["user_id"]) {
+    return res.send("Access denied!");
+  }
+  urlDatabase[req.params.id].longURL = req.body.newURL;
   res.redirect("/urls");
 });
 
 // delete URL
 app.post("/urls/:id/delete", (req, res) => {
+  if (!Object.prototype.hasOwnProperty.call(urlDatabase, req.params.id)) {
+    return res.sendStatus(404);
+  }
+  if (!isUserLoggedIn(req)) {
+    return res.send("Login required!");
+  }
+  if (urlDatabase[req.params.id].userId !== req.cookies["user_id"]) {
+    return res.send("Access denied!");
+  }
   delete urlDatabase[req.params.id];
   res.redirect("/urls");
 });
