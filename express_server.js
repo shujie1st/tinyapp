@@ -2,6 +2,7 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const app = express();
 const PORT = 8080; // default port 8080
+const bcrypt = require("bcryptjs");
 
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -174,7 +175,7 @@ app.post("/login", (req, res) => {
   // or if a user can be located by email, but password not match
   // response back with 403 status code
   let user = getUserByEmail(req.body.email);
-  if (user === null || user.password !== req.body.password) {
+  if (user === null || !bcrypt.compareSync(req.body.password, user.password)) {
     return res.sendStatus(403);
   }
 
@@ -192,10 +193,12 @@ app.post("/register", (req, res) => {
 
   // otherwise: create a new user and sets a cookie
   const userId = generateRandomString(6); //generate a random string of 6 characters for user id
+  const password = req.body.password;
+  const hashedPassword = bcrypt.hashSync(password, 10); // hash password
   const user = {
     id: userId,
     email: req.body.email,
-    password: req.body.password,
+    password: hashedPassword,
   };
   users[userId] = user;
   res.cookie("user_id", userId);
