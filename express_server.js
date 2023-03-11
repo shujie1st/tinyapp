@@ -1,11 +1,13 @@
 const express = require("express");
+const cookieParser = require("cookie-parser");
 const cookieSession = require("cookie-session");
 const methodOverride = require("method-override");
-const { getUserByEmail, generateRandomString, isUserLoggedIn, urlsForUser } = require("./helpers");
+const { getUserByEmail, generateRandomString, isUserLoggedIn, urlsForUser, countVisitors } = require("./helpers");
 const app = express();
 const PORT = 8080; // default port 8080
 const bcrypt = require("bcryptjs");
 
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieSession({
   name: "session",
@@ -34,7 +36,11 @@ app.get("/urls", (req, res) => {
     return res.send("Please login to view your list of URLs!");
   }
 
-  const templateVars = { user: users[req.session.user_id], urls: urlsForUser(req.session.user_id, urlDatabase) };
+  const templateVars = { 
+    user: users[req.session.user_id], 
+    urls: urlsForUser(req.session.user_id, urlDatabase),
+    countVisitors: countVisitors
+  };
   res.render("urls_index", templateVars);
 });
 
@@ -55,7 +61,14 @@ app.get("/urls/:id", (req, res) => {
   if (urlDatabase[req.params.id].userId !== req.session.user_id) {
     return res.send("Access denied!");
   }
-  const templateVars = { user: users[req.session.user_id], id: req.params.id, longURL: urlDatabase[req.params.id].longURL };
+  const templateVars = { 
+    user: users[req.session.user_id], 
+    id: req.params.id, 
+    longURL: urlDatabase[req.params.id].longURL,
+    createTime: urlDatabase[req.params.id].createTime,
+    visits: urlDatabase[req.params.id].visits,
+    visitorCount: countVisitors(urlDatabase[req.params.id].visits)
+  };
   res.render("urls_show", templateVars);
 });
 
@@ -64,7 +77,19 @@ app.get("/u/:id", (req, res) => {
   if (!Object.prototype.hasOwnProperty.call(urlDatabase, req.params.id)) {
     return res.sendStatus(404);
   }
-  const longURL = urlDatabase[req.params.id].longURL;
+
+  let urlData = urlDatabase[req.params.id];
+  let longURL = urlData.longURL;
+
+  //keep track of each visit
+  let visitorId = req.cookies["visitor_id"] ?? generateRandomString(10); 
+  let newVisit = {
+    timestamp: new Date(),
+    visitorId: visitorId
+  }
+  urlData.visits.push(newVisit);
+  res.cookie("visitor_id", visitorId);
+
   res.redirect(longURL);
 });
 
@@ -75,8 +100,10 @@ app.post("/urls", (req, res) => {
   }
   const id = generateRandomString(6); // generate a random string of 6 characters for short URL id
   urlDatabase[id] = {}; // set the value of ulrDatabase[id] as an object
+  urlDatabase[id].createTime = new Date();
   urlDatabase[id].longURL = req.body.longURL; // save the "longURL" key-value pair to the "id" key
   urlDatabase[id].userId = req.session.user_id; // save the "userId" key-value pair to the "id" key
+  urlDatabase[id].visits = [];
   console.log(req.body); // Log the POST request body to the console
   res.redirect(`/urls/${id}`); // Respond with a redirection to /urls/:id
 });

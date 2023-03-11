@@ -21,6 +21,25 @@
         <p class="card-text">
           Short URL ID: <a href="/u/<%= id %>"><%= id %></a>
         </p>
+        <p>Create Date: <%= createTime.toDateString() %></p>
+        <p>Total Visits: <%= visits.length %></p>
+        <p>Total Visitors: <%= visitorCount %></p>
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Visitor ID</th>
+              <th scope="col">Visit Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% for (let visit of visits) { %>
+              <tr>
+                <td><%= visit.visitorId %></td>
+                <td><%= visit.timestamp %></td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
       </div>
       <div class="card-footer text-muted">
         <h4 class="card-title">Edit</h4>

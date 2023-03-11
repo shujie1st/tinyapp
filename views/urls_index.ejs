@@ -26,6 +26,9 @@
           <tr>
             <th scope="col">Short URL ID</th>
             <th scope="col">Long URL</th>
+            <th scope="col">Create Date</th>
+            <th scope="col">Total Visits</th>
+            <th scope="col">Total Visitors</th>
             <th scope="col">Edit</th>
             <th scope="col">Delete</th>
           </tr>
@@ -35,6 +38,9 @@
             <tr>
               <td><%= id %></td>
               <td><%= urls[id].longURL %></td>
+              <td><%= urls[id].createTime.toDateString() %></td>
+              <td><%= urls[id].visits.length %></td>
+              <td><%= countVisitors(urls[id].visits) %></td>
               <td>
                 <a href="/urls/<%= id %>">Edit</a>
               </td>

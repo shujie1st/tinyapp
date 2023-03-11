@@ -33,10 +33,20 @@ const urlsForUser = function(id, urlDatabase) {
   let filteredUrls = {};
   Object.keys(urlDatabase).forEach(key => {
     if (urlDatabase[key].userId === id ) {
-      filteredUrls[key] = urlDatabase[key]
+      filteredUrls[key] = urlDatabase[key];
     }
   });
   return filteredUrls;
 };
 
-module.exports = { getUserByEmail, generateRandomString, isUserLoggedIn, urlsForUser };
+const countVisitors = function(visits){
+  let visitorIds = [];
+  for(let v of visits){
+    if (!visitorIds.includes(v.visitorId)){
+      visitorIds.push(v.visitorId);
+    }
+  }
+  return visitorIds.length;
+}
+
+module.exports = { getUserByEmail, generateRandomString, isUserLoggedIn, urlsForUser, countVisitors };
