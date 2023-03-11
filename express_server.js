@@ -1,5 +1,6 @@
 const express = require("express");
 const cookieSession = require("cookie-session");
+const { getUserByEmail } = require("./helpers");
 const app = express();
 const PORT = 8080; // default port 8080
 const bcrypt = require("bcryptjs");
@@ -34,18 +35,6 @@ const generateRandomString = function(length) {
     output += input.charAt(Math.floor(Math.random() * input.length));
   }
   return output;
-};
-
-// function to find a user in the users object by email, return null if not found
-const getUserByEmail = function(email) {
-  for (const userId in users) {
-    if (Object.prototype.hasOwnProperty.call(users, userId)) {
-      if (users[userId].email === email) {
-        return users[userId];
-      }
-    }
-  }
-  return null;
 };
 
 // function to check if a user is logged in by reading the cookie
@@ -178,8 +167,8 @@ app.post("/login", (req, res) => {
   // if a user cannot be found by email
   // or if a user can be located by email, but password not match
   // response back with 403 status code
-  let user = getUserByEmail(req.body.email);
-  if (user === null || !bcrypt.compareSync(req.body.password, user.password)) {
+  let user = getUserByEmail(req.body.email, users);
+  if (user === undefined || !bcrypt.compareSync(req.body.password, user.password)) {
     return res.sendStatus(403);
   }
 
@@ -191,7 +180,7 @@ app.post("/login", (req, res) => {
 // register
 app.post("/register", (req, res) => {
   // if empty email/password, or email already exists, response back with 400 status code
-  if (!req.body.email || !req.body.password || getUserByEmail(req.body.email) !== null) {
+  if (!req.body.email || !req.body.password || getUserByEmail(req.body.email, users) !== undefined) {
     return res.sendStatus(400);
   }
 
