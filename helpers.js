@@ -22,7 +22,7 @@ const generateRandomString = function(length) {
 
 // function to check if a user is logged in by reading the cookie
 const isUserLoggedIn = function(req, users) {
-  if (req.session.user_id && Object.prototype.hasOwnProperty.call(users, req.session.user_id)) {
+  if (req.session.userId && Object.prototype.hasOwnProperty.call(users, req.session.userId)) {
     return true;
   }
   return false;
@@ -32,21 +32,22 @@ const isUserLoggedIn = function(req, users) {
 const urlsForUser = function(id, urlDatabase) {
   let filteredUrls = {};
   Object.keys(urlDatabase).forEach(key => {
-    if (urlDatabase[key].userId === id ) {
+    if (urlDatabase[key].userId === id) {
       filteredUrls[key] = urlDatabase[key];
     }
   });
   return filteredUrls;
 };
 
-const countVisitors = function(visits){
+// function to count total visitors in total visits
+const countVisitors = function(visits) {
   let visitorIds = [];
-  for(let v of visits){
-    if (!visitorIds.includes(v.visitorId)){
+  for (let v of visits) {
+    if (!visitorIds.includes(v.visitorId)) {
       visitorIds.push(v.visitorId);
     }
   }
   return visitorIds.length;
-}
+};
 
 module.exports = { getUserByEmail, generateRandomString, isUserLoggedIn, urlsForUser, countVisitors };
