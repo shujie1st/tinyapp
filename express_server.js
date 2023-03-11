@@ -1,5 +1,6 @@
 const express = require("express");
 const cookieSession = require("cookie-session");
+const methodOverride = require("method-override");
 const { getUserByEmail, generateRandomString, isUserLoggedIn, urlsForUser } = require("./helpers");
 const app = express();
 const PORT = 8080; // default port 8080
@@ -11,6 +12,8 @@ app.use(cookieSession({
   keys: ["some-long-secret-key"],
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
+app.use(methodOverride("_method"));
+
 
 app.set("view engine", "ejs"); // use EJS as template engine
 
@@ -79,7 +82,7 @@ app.post("/urls", (req, res) => {
 });
 
 // update URL
-app.post("/urls/:id", (req, res) => {
+app.put("/urls/:id", (req, res) => {
   // return a relevant error message if id does not exist
   if (!Object.prototype.hasOwnProperty.call(urlDatabase, req.params.id)) {
     return res.send("Invalid URL id!");
@@ -95,7 +98,7 @@ app.post("/urls/:id", (req, res) => {
 });
 
 // delete URL
-app.post("/urls/:id/delete", (req, res) => {
+app.delete("/urls/:id", (req, res) => {
   if (!Object.prototype.hasOwnProperty.call(urlDatabase, req.params.id)) {
     return res.sendStatus(404);
   }

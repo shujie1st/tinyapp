@@ -39,7 +39,7 @@
                 <a href="/urls/<%= id %>">Edit</a>
               </td>
               <td>
-                <form method="POST" action="/urls/<%= id %>/delete">
+                <form method="POST" action="/urls/<%= id %>?_method=DELETE">
                   <button type="submit">Delete</button>
                 </form>
               </td>
