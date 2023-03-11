@@ -1,6 +1,6 @@
 const express = require("express");
 const cookieSession = require("cookie-session");
-const { getUserByEmail } = require("./helpers");
+const { getUserByEmail, generateRandomString, isUserLoggedIn, urlsForUser } = require("./helpers");
 const app = express();
 const PORT = 8080; // default port 8080
 const bcrypt = require("bcryptjs");
@@ -14,65 +14,30 @@ app.use(cookieSession({
 
 app.set("view engine", "ejs"); // use EJS as template engine
 
-const urlDatabase = {
-  "b2xVn2": {
-    longURL: "http://www.lighthouselabs.ca",
-    userId: "sample",
-  },
-  "9sm5xK": {
-    longURL: "http://www.google.com",
-    userId: "sample",
-  },
-};
-
+const urlDatabase = {};
 const users = {};
 
-// function to generate a specific length of string with random alphanumeric characters
-const generateRandomString = function(length) {
-  const input = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let output = "";
-  for (let i = 0; i < length; i++) {
-    output += input.charAt(Math.floor(Math.random() * input.length));
-  }
-  return output;
-};
-
-// function to check if a user is logged in by reading the cookie
-const isUserLoggedIn = function(req) {
-  if (req.session.user_id && Object.prototype.hasOwnProperty.call(users, req.session.user_id)) {
-    return true;
-  }
-  return false;
-};
-
-// fucntion to filter the list in urlDatabase by userID
-const urlsForUser = function(id) {
-  let filteredUrls = {};
-  Object.keys(urlDatabase).forEach(key => {
-    if (urlDatabase[key].userId === id ) {
-      filteredUrls[key] = urlDatabase[key]
-    }
-  });
-  return filteredUrls;
-};
-
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  if (isUserLoggedIn(req, users)) {
+    res.redirect("/urls");
+  } else {
+    res.redirect("/login");
+  }
 });
 
 // render page with a list of URLs from urlDatabase
 app.get("/urls", (req, res) => {
-  if (!isUserLoggedIn(req)) {
+  if (!isUserLoggedIn(req, users)) {
     return res.send("Please login to view your list of URLs!");
   }
 
-  const templateVars = { user: users[req.session.user_id], urls: urlsForUser(req.session.user_id) };
+  const templateVars = { user: users[req.session.user_id], urls: urlsForUser(req.session.user_id, urlDatabase) };
   res.render("urls_index", templateVars);
 });
 
 // render page to create new URL
 app.get("/urls/new", (req, res) => {
-  if (!isUserLoggedIn(req)) {
+  if (!isUserLoggedIn(req, users)) {
     return res.redirect("/login");
   }
   const templateVars = { user: users[req.session.user_id]   };
@@ -81,7 +46,7 @@ app.get("/urls/new", (req, res) => {
 
 // render URL page by id
 app.get("/urls/:id", (req, res) => {
-  if (!isUserLoggedIn(req)) {
+  if (!isUserLoggedIn(req, users)) {
     return res.send("Please login to view the URL page!");
   }
   if (urlDatabase[req.params.id].userId !== req.session.user_id) {
@@ -102,7 +67,7 @@ app.get("/u/:id", (req, res) => {
 
 // generate short URL
 app.post("/urls", (req, res) => {
-  if (!isUserLoggedIn(req)) {
+  if (!isUserLoggedIn(req, users)) {
     return res.send("Login required!");
   }
   const id = generateRandomString(6); // generate a random string of 6 characters for short URL id
@@ -117,9 +82,9 @@ app.post("/urls", (req, res) => {
 app.post("/urls/:id", (req, res) => {
   // return a relevant error message if id does not exist
   if (!Object.prototype.hasOwnProperty.call(urlDatabase, req.params.id)) {
-    return res.sendStatus(404);
+    return res.send("Invalid URL id!");
   }
-  if (!isUserLoggedIn(req)) {
+  if (!isUserLoggedIn(req, users)) {
     return res.send("Login required!");
   }
   if (urlDatabase[req.params.id].userId !== req.session.user_id) {
@@ -134,7 +99,7 @@ app.post("/urls/:id/delete", (req, res) => {
   if (!Object.prototype.hasOwnProperty.call(urlDatabase, req.params.id)) {
     return res.sendStatus(404);
   }
-  if (!isUserLoggedIn(req)) {
+  if (!isUserLoggedIn(req, users)) {
     return res.send("Login required!");
   }
   if (urlDatabase[req.params.id].userId !== req.session.user_id) {
@@ -146,7 +111,7 @@ app.post("/urls/:id/delete", (req, res) => {
 
 // render login page
 app.get("/login", (req, res) => {
-  if (isUserLoggedIn(req)) {
+  if (isUserLoggedIn(req, users)) {
     return res.redirect("/urls");
   }
   const templateVars = { user: users[req.session.user_id] };
@@ -155,7 +120,7 @@ app.get("/login", (req, res) => {
 
 // render register page
 app.get("/register", (req, res) => {
-  if (isUserLoggedIn(req)) {
+  if (isUserLoggedIn(req, users)) {
     return res.redirect("/urls");
   }
   const templateVars = { user: users[req.session.user_id] };
@@ -168,8 +133,11 @@ app.post("/login", (req, res) => {
   // or if a user can be located by email, but password not match
   // response back with 403 status code
   let user = getUserByEmail(req.body.email, users);
-  if (user === undefined || !bcrypt.compareSync(req.body.password, user.password)) {
-    return res.sendStatus(403);
+  if (!user) {
+    return res.status(403).send('User not found');
+  }
+  if (!bcrypt.compareSync(req.body.password, user.password)) {
+    return res.status(403).send('Invalid credentials');
   }
 
   //if bothe checks pass, set "user_id" cookie, then redirect to "/urls"
@@ -180,8 +148,12 @@ app.post("/login", (req, res) => {
 // register
 app.post("/register", (req, res) => {
   // if empty email/password, or email already exists, response back with 400 status code
-  if (!req.body.email || !req.body.password || getUserByEmail(req.body.email, users) !== undefined) {
-    return res.sendStatus(400);
+  if (!req.body.email || !req.body.password) {
+    return res.status(400).send('Email and password are required!');
+  }
+
+  if (getUserByEmail(req.body.email, users)) {
+    return res.status(400).send('Email already used!');
   }
 
   // otherwise: create a new user and sets a cookie
