@@ -111,12 +111,12 @@ app.post("/urls", (req, res) => {
     return res.send("Login required!");
   }
   const id = generateRandomString(6); // generate a random string of 6 characters for short URL id
-  urlDatabase[id] = {}; // set the value of ulrDatabase[id] as an object
-  let urlData = urlDatabase[id];
+  let urlData = {};
   urlData.createTime = new Date(); // save the create time
   urlData.longURL = req.body.longURL; // save the "longURL" key-value pair
   urlData.userId = req.session.userId; // save the "userId" key-value pair
   urlData.visits = []; // create array to store visits information
+  urlDatabase[id] = urlData;
   console.log(req.body); // Log the POST request body to the console
   res.redirect(`/urls/${id}`); // Respond with a redirection to /urls/:id
 });
