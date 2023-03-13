@@ -117,7 +117,6 @@ app.post("/urls", (req, res) => {
   urlData.userId = req.session.userId; // save the "userId" key-value pair
   urlData.visits = []; // create array to store visits information
   urlDatabase[id] = urlData;
-  console.log(req.body); // Log the POST request body to the console
   res.redirect(`/urls/${id}`); // Respond with a redirection to /urls/:id
 });
 
@@ -220,7 +219,6 @@ app.post("/register", (req, res) => {
   };
   users[userId] = user; // save user information
   req.session.userId = userId;
-  console.log(users); // test the users object is properly being appended to
   res.redirect("/urls");
 });
 
